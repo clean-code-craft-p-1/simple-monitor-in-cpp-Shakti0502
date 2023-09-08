@@ -12,6 +12,12 @@ enum class VitalType { Temperature, PulseRate, Spo2 };
 // Enumeration for vital status
 enum class VitalStatus { Ok, Critical, Warning };
 
+// Enumeration for supported languages
+enum class Language { English, German, /* Add more languages here */ };
+
+// Global variable to store the current language
+Language currentLanguage = Language::English;
+
 // Struct to hold vital information
 struct VitalInfo {
     float lowerLimit;
@@ -26,6 +32,29 @@ map<VitalType, VitalInfo> vitalsInfo = {
     {VitalType::Temperature, {95, 102, 1.5, "Temperature critical!", "Warning: Approaching hypothermia or hyperthermia!"}},
     {VitalType::PulseRate, {60, 100, 1.5, "Pulse Rate is out of range!", "Warning: Approaching abnormal pulse rate!"}},
     {VitalType::Spo2, {90, 100, 1.5, "Oxygen Saturation out of range!", "Warning: Approaching low oxygen saturation!"}}
+};
+
+// Map to store translations for different languages
+map<Language, map<string, string>> translations = {
+    {Language::English, {
+        {"Temperature critical!", "Temperature critical!"},
+        {"Pulse Rate is out of range!", "Pulse Rate is out of range!"},
+        {"Oxygen Saturation out of range!", "Oxygen Saturation out of range!"},
+        {"Warning: Approaching hypothermia or hyperthermia!", "Warning: Approaching hypothermia or hyperthermia!"},
+        {"Warning: Approaching abnormal pulse rate!", "Warning: Approaching abnormal pulse rate!"},
+        {"Warning: Approaching low oxygen saturation!", "Warning: Approaching low oxygen saturation!"},
+        {"All tests passed.", "All tests passed."}
+    }},
+    {Language::German, {
+        {"Temperature critical!", "Temperatur kritisch!"},
+        {"Pulse Rate is out of range!", "Pulsrate ist außerhalb des Bereichs!"},
+        {"Oxygen Saturation out of range!", "Sauerstoffsättigung außerhalb des Bereichs!"},
+        {"Warning: Approaching hypothermia or hyperthermia!", "Warnung: Annäherung an Unterkühlung oder Hyperthermie!"},
+        {"Warning: Approaching abnormal pulse rate!", "Warnung: Annäherung an abnormale Pulsrate!"},
+        {"Warning: Approaching low oxygen saturation!", "Warnung: Annäherung an niedrige Sauerstoffsättigung!"},
+        {"All tests passed.", "Alle Tests bestanden."}
+    }}
+    /* Add more languages here */
 };
 
 void simulateBlinkingEffect() {
@@ -51,15 +80,28 @@ VitalStatus checkVital(VitalType type, float value) {
     const VitalInfo& info = vitalsInfo[type];
     if (isOutOfRange(value, info)) {
         if (isApproachingWarning(value, info)) {
-            cout << info.warningMessage << endl;
+            cout << translations[currentLanguage][info.warningMessage] << endl;
             return VitalStatus::Warning;
         }
         else {
-            cout << info.criticalMessage << endl;
+            cout << translations[currentLanguage][info.criticalMessage] << endl;
             return VitalStatus::Critical;
         }
     }
     return VitalStatus::Ok;
+}
+
+void setLanguage(Language language) {
+    currentLanguage = language;
+}
+
+string translate(const string& message) {
+    if (translations.find(currentLanguage) != translations.end() &&
+        translations[currentLanguage].find(message) != translations[currentLanguage].end()) {
+        return translations[currentLanguage][message];
+    }
+    // If translation not found, return the message in English as a fallback
+    return message;
 }
 
 bool vitalsOk(float temperature, float pulseRate, float spo2) {
@@ -71,6 +113,9 @@ bool vitalsOk(float temperature, float pulseRate, float spo2) {
 }
 
 int main() {
+    // Set the language to German
+    setLanguage(Language::German);
+
     // Test temperature
     assert(!vitalsOk(94, 70, 98));
     assert(!vitalsOk(103, 70, 98));
@@ -95,5 +140,5 @@ int main() {
     assert(vitalsOk(98.1, 70, 98));
     assert(vitalsOk(98.1, 70, 90));
 
-    cout << "All tests passed." << endl;
+    cout << translate("All tests passed.") << endl;
 }
