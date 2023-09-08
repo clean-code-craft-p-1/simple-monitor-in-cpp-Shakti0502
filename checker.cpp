@@ -2,12 +2,34 @@
 #include <cassert>
 #include <unistd.h>
 #include <cmath>
+#include <vector>
+#include <map>
 using namespace std;
 
-void simulateBlinkingEffect()
-{
-    for (int i = 0; i < 6; i++)
-    {
+// Enumeration for vital types
+enum class VitalType { Temperature, PulseRate, Spo2 };
+
+// Enumeration for vital status
+enum class VitalStatus { Ok, Critical, Warning };
+
+// Struct to hold vital information
+struct VitalInfo {
+    float lowerLimit;
+    float upperLimit;
+    float tolerance;
+    const char* criticalMessage;
+    const char* warningMessage;
+};
+
+// Map to store vital information
+map<VitalType, VitalInfo> vitalsInfo = {
+    {VitalType::Temperature, {95, 102, 1.5, "Temperature critical!", "Warning: Approaching hypothermia or hyperthermia!"}},
+    {VitalType::PulseRate, {60, 100, 1.5, "Pulse Rate is out of range!", "Warning: Approaching abnormal pulse rate!"}},
+    {VitalType::Spo2, {90, 100, 1.5, "Oxygen Saturation out of range!", "Warning: Approaching low oxygen saturation!"}}
+};
+
+void simulateBlinkingEffect() {
+    for (int i = 0; i < 6; i++) {
         cout << "\r* " << flush;
         sleep(1);
         cout << "\r *" << flush;
@@ -15,79 +37,40 @@ void simulateBlinkingEffect()
     }
 }
 
-bool isOutOfRange(float value, float lower, float upper)
-{
-    return value < lower || value > upper;
+bool isOutOfRange(float value, const VitalInfo& info) {
+    return value < info.lowerLimit || value > info.upperLimit;
 }
 
-bool isApproachingWarning(float value, float lower, float upper, float tolerance)
-{
-    float lowerThreshold = lower + (upper - lower) * (1 - tolerance / 100.0);
-    float upperThreshold = upper - (upper - lower) * (1 - tolerance / 100.0);
+bool isApproachingWarning(float value, const VitalInfo& info) {
+    float lowerThreshold = info.lowerLimit + (info.upperLimit - info.lowerLimit) * (1 - info.tolerance / 100.0);
+    float upperThreshold = info.upperLimit - (info.upperLimit - info.lowerLimit) * (1 - info.tolerance / 100.0);
     return value >= lowerThreshold && value <= upperThreshold;
 }
 
-int vitalsOk(float temperature, float pulseRate, float spo2)
-{
-    float temperatureUpperLimit = 102;
-    float pulseRateUpperLimit = 100;
-    float spo2UpperLimit = 100;
-    float tolerance = 1.5; // 1.5% tolerance
-
-    // Check temperature
-    if (isOutOfRange(temperature, 95, temperatureUpperLimit))
-    {
-        if (isApproachingWarning(temperature, 95, temperatureUpperLimit, tolerance))
-        {
-            cout << "Warning: Approaching hypothermia!\n";
+VitalStatus checkVital(VitalType type, float value) {
+    const VitalInfo& info = vitalsInfo[type];
+    if (isOutOfRange(value, info)) {
+        if (isApproachingWarning(value, info)) {
+            cout << info.warningMessage << endl;
+            return VitalStatus::Warning;
         }
-        else if (isApproachingWarning(temperature, temperatureUpperLimit - 1.53, temperatureUpperLimit, tolerance))
-        {
-            cout << "Warning: Approaching hyperthermia!\n";
+        else {
+            cout << info.criticalMessage << endl;
+            return VitalStatus::Critical;
         }
-        else
-        {
-            cout << "Temperature critical!\n";
-        }
-        simulateBlinkingEffect();
-        return 0;
     }
-
-    // Check pulse rate
-    if (isOutOfRange(pulseRate, 60, pulseRateUpperLimit))
-    {
-        if (isApproachingWarning(pulseRate, 60, pulseRateUpperLimit, tolerance))
-        {
-            cout << "Warning: Approaching abnormal pulse rate!\n";
-        }
-        else
-        {
-            cout << "Pulse Rate is out of range!\n";
-        }
-        simulateBlinkingEffect();
-        return 0;
-    }
-
-    // Check spo2
-    if (isOutOfRange(spo2, 90, spo2UpperLimit))
-    {
-        if (isApproachingWarning(spo2, 90, spo2UpperLimit, tolerance))
-        {
-            cout << "Warning: Approaching low oxygen saturation!\n";
-        }
-        else
-        {
-            cout << "Oxygen Saturation out of range!\n";
-        }
-        simulateBlinkingEffect();
-        return 0;
-    }
-
-    return 1;
+    return VitalStatus::Ok;
 }
 
-int main()
-{
+bool vitalsOk(float temperature, float pulseRate, float spo2) {
+    bool isTemperatureOk = checkVital(VitalType::Temperature, temperature) == VitalStatus::Ok;
+    bool isPulseRateOk = checkVital(VitalType::PulseRate, pulseRate) == VitalStatus::Ok;
+    bool isSpo2Ok = checkVital(VitalType::Spo2, spo2) == VitalStatus::Ok;
+
+    return isTemperatureOk && isPulseRateOk && isSpo2Ok;
+}
+
+int main() {
     // Test temperature
     assert(!vitalsOk(94, 70, 98));
     assert(!vitalsOk(103, 70, 98));
@@ -112,5 +95,5 @@ int main()
     assert(vitalsOk(98.1, 70, 98));
     assert(vitalsOk(98.1, 70, 90));
 
-    cout << "All tests passed.\n";
+    cout << "All tests passed." << endl;
 }
